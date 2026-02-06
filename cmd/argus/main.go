@@ -2,16 +2,20 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log"
+	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/mjrtuhin/argus/pkg/prometheus"
 	"github.com/mjrtuhin/argus/pkg/storage"
+	"github.com/mjrtuhin/argus/pkg/worker"
 )
 
 func main() {
-	log.Println("🚀 ARGUS - Starting...")
+	log.Println("🚀 ARGUS - ML-Powered Anomaly Detection System")
+	log.Println("=" + string(make([]byte, 50)))
 
 	// Connect to database
 	db, err := storage.NewDB("localhost", "5432", "argus", "argus_dev_2025", "argus")
@@ -25,43 +29,27 @@ func main() {
 	promClient := prometheus.NewClient("http://localhost:9090")
 	log.Println("✅ Connected to Prometheus")
 
-	// Test: Fetch one metric and store it
-	ctx := context.Background()
-	
-	// Query a simple metric
-	result, err := promClient.Query(ctx, "up")
-	if err != nil {
-		log.Fatalf("❌ Failed to query metric: %v", err)
-	}
+	// Create metric collector (collect every 60 seconds)
+	collector := worker.NewMetricCollector(promClient, db, 60*time.Second)
 
-	if len(result.Data.Result) > 0 {
-		// Create metric in database
-		metric, err := db.CreateMetric(ctx, "up")
-		if err != nil {
-			log.Fatalf("❌ Failed to create metric: %v", err)
-		}
-		log.Printf("✅ Metric created in DB: %s (ID: %d)", metric.MetricName, metric.ID)
+	// Create context for graceful shutdown
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
-		// Store the data point
-		timestamp := time.Now()
-		value := result.Data.Result[0].Value[1].(string)
-		
-		var floatValue float64
-		fmt.Sscanf(value, "%f", &floatValue)
+	// Start collector in background
+	go collector.Start(ctx)
 
-		points := []storage.MetricDataPoint{
-			{
-				MetricID:  metric.ID,
-				Timestamp: timestamp,
-				Value:     floatValue,
-			},
-		}
+	log.Println("🔄 Metric collection started (every 60 seconds)")
+	log.Println("📊 Press Ctrl+C to stop")
+	log.Println("")
 
-		if err := db.InsertMetricData(ctx, points); err != nil {
-			log.Fatalf("❌ Failed to insert data: %v", err)
-		}
-		log.Printf("✅ Data point stored: value=%f at %s", floatValue, timestamp.Format(time.RFC3339))
-	}
+	// Wait for interrupt signal
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
 
-	log.Println("🎉 ARGUS is working! Prometheus → Go → PostgreSQL pipeline complete!")
+	<-sigChan
+	log.Println("\n🛑 Shutting down gracefully...")
+	cancel()
+	time.Sleep(2 * time.Second)
+	log.Println("👋 Goodbye!")
 }

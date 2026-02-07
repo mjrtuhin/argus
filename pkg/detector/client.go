@@ -22,10 +22,12 @@ type DetectionRequest struct {
 }
 
 type Anomaly struct {
-	Timestamp int64    `json:"timestamp"`
-	Value     float64  `json:"value"`
-	Score     float64  `json:"score"`
-	Methods   []string `json:"methods"`
+	Timestamp  int64    `json:"timestamp"`
+	Value      float64  `json:"value"`
+	Score      float64  `json:"score"`
+	Methods    []string `json:"methods"`
+	RootCause  string   `json:"root_cause"`
+	Impact     string   `json:"impact"`
 }
 
 type DetectionResponse struct {

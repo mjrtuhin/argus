@@ -16,14 +16,16 @@ type Anomaly struct {
 	DetectionMethods []string
 	Severity         string
 	Status           string
+	RootCause        string
+	Impact           string
 	CreatedAt        time.Time
 }
 
 func (db *DB) CreateAnomaly(ctx context.Context, anomaly *Anomaly) error {
 	return db.conn.QueryRowContext(ctx,
 		`INSERT INTO anomalies 
-		 (metric_id, timestamp, value, anomaly_score, detection_methods, severity, status)
-		 VALUES ($1, $2, $3, $4, $5, $6, $7)
+		 (metric_id, timestamp, value, anomaly_score, detection_methods, severity, status, root_cause, impact)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 		 RETURNING id, created_at`,
 		anomaly.MetricID,
 		anomaly.Timestamp,
@@ -32,13 +34,15 @@ func (db *DB) CreateAnomaly(ctx context.Context, anomaly *Anomaly) error {
 		pq.Array(anomaly.DetectionMethods),
 		anomaly.Severity,
 		anomaly.Status,
+		anomaly.RootCause,
+		anomaly.Impact,
 	).Scan(&anomaly.ID, &anomaly.CreatedAt)
 }
 
 func (db *DB) GetRecentAnomalies(ctx context.Context, limit int) ([]Anomaly, error) {
 	rows, err := db.conn.QueryContext(ctx,
 		`SELECT id, metric_id, timestamp, value, anomaly_score, 
-		        detection_methods, severity, status, created_at
+		        detection_methods, severity, status, root_cause, impact, created_at
 		 FROM anomalies
 		 WHERE status = 'open'
 		 ORDER BY created_at DESC
@@ -56,7 +60,7 @@ func (db *DB) GetRecentAnomalies(ctx context.Context, limit int) ([]Anomaly, err
 		if err := rows.Scan(
 			&a.ID, &a.MetricID, &a.Timestamp, &a.Value,
 			&a.AnomalyScore, pq.Array(&a.DetectionMethods),
-			&a.Severity, &a.Status, &a.CreatedAt,
+			&a.Severity, &a.Status, &a.RootCause, &a.Impact, &a.CreatedAt,
 		); err != nil {
 			return nil, err
 		}

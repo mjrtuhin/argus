@@ -50,7 +50,7 @@ def detect_anomalies():
         return jsonify({'error': str(e)}), 500
 
 def detect_ensemble(timestamps, values):
-    """Ensemble detection: Prophet + STL + Isolation Forest"""
+    """Ensemble detection with root cause analysis"""
     
     results = {
         'prophet': detect_prophet(timestamps, values),
@@ -58,14 +58,17 @@ def detect_ensemble(timestamps, values):
         'isolation_forest': detect_isolation_forest(values)
     }
     
-    # Weighted voting
     weights = {
         'prophet': 0.4,
         'stl': 0.3,
         'isolation_forest': 0.3
     }
     
-    threshold = 0.6  # Lower threshold for better detection
+    threshold = 0.6
+    
+    # Calculate statistics
+    mean_value = np.mean(values)
+    std_value = np.std(values)
     
     anomalies = []
     for i in range(len(timestamps)):
@@ -78,14 +81,45 @@ def detect_ensemble(timestamps, values):
                 detected_by.append(method)
         
         if score >= threshold:
+            value = values[i]
+            deviation = abs(value - mean_value) / std_value if std_value > 0 else 0
+            
+            # Generate explanations
+            root_cause = generate_root_cause(value, mean_value, deviation, detected_by)
+            impact = generate_impact(deviation, detected_by)
+            
             anomalies.append({
                 'timestamp': int(timestamps[i]),
-                'value': float(values[i]),
+                'value': float(value),
                 'score': float(score),
-                'methods': detected_by
+                'methods': detected_by,
+                'root_cause': root_cause,
+                'impact': impact
             })
     
     return anomalies
+
+def generate_root_cause(value, mean_value, deviation, methods):
+    """Generate human-readable root cause"""
+    if deviation > 3:
+        direction = "spike" if value > mean_value else "drop"
+        return f"Extreme {direction} detected - value is {deviation:.1f} standard deviations from normal baseline (avg: {mean_value:.2f})"
+    elif deviation > 2:
+        direction = "increase" if value > mean_value else "decrease"
+        return f"Significant {direction} - value deviates {deviation:.1f}σ from expected range"
+    else:
+        return f"Pattern anomaly detected by {', '.join(methods)} - unusual behavior compared to historical trends"
+
+def generate_impact(deviation, methods):
+    """Assess potential impact"""
+    if deviation > 3:
+        return "CRITICAL: Immediate investigation required - may indicate system failure or resource exhaustion"
+    elif deviation > 2:
+        return "HIGH: Monitor closely - potential performance degradation or capacity issues"
+    elif 'prophet' in methods:
+        return "MEDIUM: Trend deviation detected - may indicate gradual system changes or load patterns"
+    else:
+        return "LOW: Minor anomaly - routine monitoring recommended"
 
 def detect_prophet(timestamps, values):
     """Prophet-based anomaly detection"""
@@ -105,7 +139,6 @@ def detect_prophet(timestamps, values):
         model.fit(df)
         forecast = model.predict(df)
         
-        # Anomaly if outside prediction interval
         is_anomaly = (df['y'] < forecast['yhat_lower']) | (df['y'] > forecast['yhat_upper'])
         return is_anomaly.values
         
@@ -123,7 +156,6 @@ def detect_stl(values):
         result = stl.fit()
         residuals = result.resid
         
-        # Anomaly if residual > 2.5 std deviations
         threshold = 2.5 * np.std(residuals)
         is_anomaly = np.abs(residuals) > threshold
         return is_anomaly

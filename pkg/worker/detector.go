@@ -115,6 +115,8 @@ func (ad *AnomalyDetector) detectForMetric(ctx context.Context, metric storage.M
 			DetectionMethods: a.Methods,
 			Severity:         severity,
 			Status:           "open",
+			RootCause:        a.RootCause,
+			Impact:           a.Impact,
 		}
 
 		// Store in database

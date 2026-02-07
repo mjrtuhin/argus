@@ -8,6 +8,7 @@ import (
 
 	"github.com/gorilla/mux"
 )
+
 type HealthResponse struct {
 	Status  string `json:"status"`
 	Service string `json:"service"`
@@ -41,6 +42,8 @@ type AnomalyInfo struct {
 	DetectionMethods []string `json:"detection_methods"`
 	Severity         string   `json:"severity"`
 	Status           string   `json:"status"`
+	RootCause        string   `json:"root_cause"`
+	Impact           string   `json:"impact"`
 	CreatedAt        string   `json:"created_at"`
 }
 
@@ -110,6 +113,8 @@ func (s *Server) handleGetAnomalies(w http.ResponseWriter, r *http.Request) {
 			DetectionMethods: a.DetectionMethods,
 			Severity:         a.Severity,
 			Status:           a.Status,
+			RootCause:        a.RootCause,
+			Impact:           a.Impact,
 			CreatedAt:        a.CreatedAt.Format("2006-01-02T15:04:05Z"),
 		}
 	}
@@ -131,8 +136,6 @@ func (s *Server) handleGetAnomalyByID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// For now, just return from recent anomalies
-	// TODO: Add GetAnomalyByID to storage
 	ctx := r.Context()
 	anomalies, err := s.db.GetRecentAnomalies(ctx, 100)
 	if err != nil {
@@ -151,6 +154,8 @@ func (s *Server) handleGetAnomalyByID(w http.ResponseWriter, r *http.Request) {
 				DetectionMethods: a.DetectionMethods,
 				Severity:         a.Severity,
 				Status:           a.Status,
+				RootCause:        a.RootCause,
+				Impact:           a.Impact,
 				CreatedAt:        a.CreatedAt.Format("2006-01-02T15:04:05Z"),
 			}
 			respondJSON(w, http.StatusOK, anomalyInfo)

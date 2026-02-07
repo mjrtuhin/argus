@@ -1,0 +1,266 @@
+.dashboard {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 20px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+}
+
+.header {
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  margin-bottom: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.header h1 {
+  margin: 0;
+  font-size: 32px;
+  color: #2d3748;
+}
+
+.status-indicator {
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.status-indicator.connected {
+  background: #48bb78;
+  color: white;
+}
+
+.status-indicator.disconnected {
+  background: #f56565;
+  color: white;
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 20px;
+  margin-bottom: 20px;
+}
+
+.stat-card {
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.stat-card h3 {
+  margin: 0 0 12px 0;
+  font-size: 14px;
+  color: #718096;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.stat-value {
+  font-size: 36px;
+  font-weight: bold;
+  color: #2d3748;
+}
+
+.stat-value.critical {
+  color: #ff0000;
+}
+
+.stat-value.high {
+  color: #ff6b00;
+}
+
+.content {
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  gap: 20px;
+}
+
+.section {
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.section h2 {
+  margin: 0 0 20px 0;
+  font-size: 20px;
+  color: #2d3748;
+}
+
+.metrics-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.metric-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px;
+  background: #f7fafc;
+  border-radius: 8px;
+  border-left: 4px solid #667eea;
+}
+
+.metric-name {
+  font-size: 14px;
+  color: #2d3748;
+  font-family: 'Courier New', monospace;
+}
+
+.metric-status {
+  font-size: 12px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-weight: 600;
+}
+
+.metric-status.active {
+  background: #c6f6d5;
+  color: #22543d;
+}
+
+.metric-status.inactive {
+  background: #fed7d7;
+  color: #742a2a;
+}
+
+.anomalies-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-height: 600px;
+  overflow-y: auto;
+}
+
+.anomaly-card {
+  background: #f7fafc;
+  border-radius: 8px;
+  padding: 16px;
+  border-left: 6px solid;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.anomaly-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.anomaly-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.anomaly-emoji {
+  font-size: 24px;
+}
+
+.anomaly-severity {
+  font-weight: bold;
+  font-size: 14px;
+}
+
+.anomaly-time {
+  margin-left: auto;
+  font-size: 12px;
+  color: #718096;
+}
+
+.anomaly-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.anomaly-metric {
+  font-family: 'Courier New', monospace;
+  font-size: 14px;
+  color: #2d3748;
+  font-weight: 600;
+}
+
+.anomaly-details {
+  display: flex;
+  gap: 20px;
+  font-size: 14px;
+  color: #4a5568;
+}
+
+.anomaly-methods {
+  font-size: 12px;
+  color: #718096;
+  font-style: italic;
+}
+
+.loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  font-size: 24px;
+  color: white;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+.anomaly-root-cause {
+  padding: 10px;
+  background: #fff3cd;
+  border-left: 4px solid #ffc107;
+  border-radius: 6px;
+  font-size: 13px;
+  color: #856404;
+  margin-top: 8px;
+  line-height: 1.5;
+}
+
+.anomaly-impact {
+  padding: 10px;
+  background: #f8d7da;
+  border-left: 4px solid #dc3545;
+  border-radius: 6px;
+  font-size: 13px;
+  color: #721c24;
+  margin-top: 8px;
+  line-height: 1.5;
+}
+
+.resolve-btn {
+  margin-left: auto;
+  padding: 6px 12px;
+  background: #48bb78;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.resolve-btn:hover {
+  background: #38a169;
+  transform: translateY(-1px);
+}
+
+.resolve-btn:active {
+  transform: translateY(0);
+}
+
+@media (max-width: 768px) {
+  .content {
+    grid-template-columns: 1fr;
+  }
+  
+  .stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}

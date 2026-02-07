@@ -14,18 +14,18 @@ type AnomalyDetector struct {
 	mlClient    *detector.MLClient
 	db          *storage.DB
 	slackSender *alerting.SlackSender
+	hub         interface{ BroadcastAnomaly(storage.Anomaly, string) }
 	interval    time.Duration
 }
-
-func NewAnomalyDetector(mlClient *detector.MLClient, db *storage.DB, slackSender *alerting.SlackSender, interval time.Duration) *AnomalyDetector {
+func NewAnomalyDetector(mlClient *detector.MLClient, db *storage.DB, slackSender *alerting.SlackSender, hub interface{ BroadcastAnomaly(storage.Anomaly, string) }, interval time.Duration) *AnomalyDetector {
 	return &AnomalyDetector{
 		mlClient:    mlClient,
 		db:          db,
 		slackSender: slackSender,
+		hub:         hub,
 		interval:    interval,
 	}
 }
-
 func (ad *AnomalyDetector) Start(ctx context.Context) {
 	ticker := time.NewTicker(ad.interval)
 	defer ticker.Stop()
@@ -128,6 +128,11 @@ func (ad *AnomalyDetector) detectForMetric(ctx context.Context, metric storage.M
 		// Send alert
 		if err := ad.slackSender.SendAlert(ctx, metric.MetricName, a.Value, a.Score, severity); err != nil {
 			log.Printf("⚠️  Failed to send alert: %v", err)
+		}
+
+		// Broadcast via WebSocket
+		if ad.hub != nil {
+			ad.hub.BroadcastAnomaly(*anomaly, metric.MetricName)
 		}
 	}
 

@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/mjrtuhin/argus/pkg/alerting"
+	"github.com/mjrtuhin/argus/pkg/api"
 	"github.com/mjrtuhin/argus/pkg/detector"
 	"github.com/mjrtuhin/argus/pkg/prometheus"
 	"github.com/mjrtuhin/argus/pkg/storage"
@@ -35,19 +36,32 @@ func main() {
 	mlClient := detector.NewMLClient("http://localhost:5001")
 	log.Println("✅ Connected to ML service")
 
-	// Create Slack alerting (empty = console mode)
+	// Create Slack alerting
 	slackSender := alerting.NewSlackSender("")
 	log.Println("✅ Alerting initialized (console mode)")
 
+	// Create API server
+	apiServer := api.NewServer(db, "8080")
+
 	// Create workers
 	collector := worker.NewMetricCollector(promClient, db, 60*time.Second)
-	detectorWorker := worker.NewAnomalyDetector(mlClient, db, slackSender, 5*time.Minute)
+	detectorWorker := worker.NewAnomalyDetector(mlClient, db, slackSender, apiServer.GetHub(), 5*time.Minute)
 
 	// Create context for graceful shutdown
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	// Start workers in background
+	// Start API server
+	go func() {
+		if err := apiServer.Start(ctx); err != nil {
+			log.Printf("❌ API server error: %v", err)
+		}
+	}()
+
+	// Start WebSocket hub
+	go apiServer.GetHub().Run(ctx)
+
+	// Start workers
 	go collector.Start(ctx)
 	go detectorWorker.Start(ctx)
 

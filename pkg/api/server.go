@@ -14,23 +14,26 @@ import (
 type Server struct {
 	router *mux.Router
 	db     *storage.DB
+	hub    *Hub
 	port   string
 }
-
 func NewServer(db *storage.DB, port string) *Server {
 	s := &Server{
 		router: mux.NewRouter(),
 		db:     db,
+		hub:    NewHub(),
 		port:   port,
 	}
 
 	s.setupRoutes()
 	return s
 }
-
 func (s *Server) setupRoutes() {
 	// Health check
 	s.router.HandleFunc("/health", s.handleHealth).Methods("GET")
+
+	// WebSocket endpoint
+	s.router.HandleFunc("/ws/anomalies", s.hub.ServeWS)
 
 	// API routes
 	api := s.router.PathPrefix("/api").Subrouter()
@@ -93,4 +96,7 @@ func loggingMiddleware(next http.Handler) http.Handler {
 		next.ServeHTTP(w, r)
 		log.Printf("📡 %s %s - %v", r.Method, r.URL.Path, time.Since(start))
 	})
+}
+func (s *Server) GetHub() *Hub {
+	return s.hub
 }

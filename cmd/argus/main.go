@@ -5,13 +5,14 @@ import (
 	"log"
 	"time"
 
+	"github.com/mjrtuhin/argus/pkg/alerting"
 	"github.com/mjrtuhin/argus/pkg/detector"
 	"github.com/mjrtuhin/argus/pkg/storage"
 )
 
 func main() {
-	log.Println("🚀 ARGUS - ML Detection with Anomaly Storage")
-	log.Println("=============================================")
+	log.Println("🚀 ARGUS - Detection, Storage & Alerting")
+	log.Println("=========================================")
 
 	// Connect to database
 	db, err := storage.NewDB("localhost", "5432", "argus", "argus_dev_2025", "argus")
@@ -24,6 +25,10 @@ func main() {
 	// Create ML client
 	mlClient := detector.NewMLClient("http://localhost:5001")
 	log.Println("✅ ML client created")
+
+	// Create Slack alerting (empty webhook = console only)
+	slackSender := alerting.NewSlackSender("")
+	log.Println("✅ Alerting initialized (console mode)")
 
 	ctx := context.Background()
 
@@ -55,7 +60,7 @@ func main() {
 	log.Println("🔮 Running ML detection...")
 	result, err := mlClient.DetectAnomalies(ctx, &detector.DetectionRequest{
 		MetricID:   metricID,
-		MetricName: "test_metric",
+		MetricName: "go_gc_cycles_automatic_gc_cycles_total",
 		Timestamps: timestamps,
 		Values:     values,
 	})
@@ -65,21 +70,24 @@ func main() {
 
 	log.Printf("✅ Detection complete: %d anomalies found", result.AnomalyCount)
 
-	// Store anomalies in database
+	// Store and alert on anomalies
 	if len(result.Anomalies) > 0 {
-		log.Println("💾 Storing anomalies in database...")
+		log.Println("💾 Storing anomalies and sending alerts...")
 		
 		for _, a := range result.Anomalies {
+			severity := classifySeverity(a.Score)
+			
 			anomaly := &storage.Anomaly{
 				MetricID:         metricID,
 				Timestamp:        time.Unix(a.Timestamp, 0),
 				Value:            a.Value,
 				AnomalyScore:     a.Score,
 				DetectionMethods: a.Methods,
-				Severity:         classifySeverity(a.Score),
+				Severity:         severity,
 				Status:           "open",
 			}
 
+			// Store in database
 			if err := db.CreateAnomaly(ctx, anomaly); err != nil {
 				log.Printf("❌ Failed to store anomaly: %v", err)
 				continue
@@ -87,23 +95,17 @@ func main() {
 
 			log.Printf("   ✅ Stored: Value=%.2f, Score=%.3f, Severity=%s, ID=%d",
 				anomaly.Value, anomaly.AnomalyScore, anomaly.Severity, anomaly.ID)
-		}
-	}
 
-	// Retrieve and display stored anomalies
-	log.Println("\n📋 Recent anomalies from database:")
-	recentAnomalies, err := db.GetRecentAnomalies(ctx, 10)
-	if err != nil {
-		log.Printf("❌ Failed to get anomalies: %v", err)
+			// Send alert
+			if err := slackSender.SendAlert(ctx, result.MetricName, a.Value, a.Score, severity); err != nil {
+				log.Printf("❌ Failed to send alert: %v", err)
+			}
+		}
 	} else {
-		for i, a := range recentAnomalies {
-			log.Printf("   %d. [%s] Value=%.2f, Score=%.3f, Time=%s",
-				i+1, a.Severity, a.Value, a.AnomalyScore,
-				a.Timestamp.Format("15:04:05"))
-		}
+		log.Println("✅ No new anomalies detected")
 	}
 
-	log.Println("\n🎉 COMPLETE: Detect → Store → Retrieve pipeline working!")
+	log.Println("\n🎉 COMPLETE: Detect → Store → Alert pipeline working!")
 }
 
 func classifySeverity(score float64) string {
